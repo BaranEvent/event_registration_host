@@ -33,7 +33,7 @@ def get_airtable_table(table_name):
     return api.table(AIRTABLE_CONFIG["base_id"], table_name)
 
 def get_record_by_host_id(host_id):
-    """Get record by host_id to retrieve the record ID"""
+    """Get record by host_id to retrieve the ID column value"""
     try:
         table = get_airtable_table("events")
         # Search for records with the specific host_id
@@ -48,11 +48,21 @@ def get_record_by_host_id(host_id):
         if records and len(records) > 0:
             # Get the most recent record (last created)
             latest_record = records[-1]
-            return latest_record.get('id')
+            fields = latest_record.get('fields', {})
+            
+            # Look for ID column in fields
+            if 'ID' in fields:
+                return fields['ID']
+            elif 'id' in fields:
+                return fields['id']
+            elif 'Id' in fields:
+                return fields['Id']
+            else:
+                return None
         
         return None
     except Exception as e:
-        st.error(f"Record ID alınırken hata oluştu: {e}")
+        st.error(f"ID Column Value alınırken hata oluştu: {e}")
         return None
 
 def generate_host_id():
@@ -78,10 +88,6 @@ def save_event(event_data):
         # Create the record
         response = table.create(record_data)
         
-        # Debug: Log the response
-        st.write("Debug - Response type:", type(response))
-        st.write("Debug - Response keys:", response.keys() if isinstance(response, dict) else "Not a dict")
-        
         if response:
             st.success("✅ Etkinlik başarıyla kaydedildi!")
             
@@ -90,37 +96,57 @@ def save_event(event_data):
             
             # If response is a dict, it might contain the record directly
             if isinstance(response, dict):
-                st.write("Debug - Response is a dictionary")
-                # Check if it has an 'id' field directly
-                if 'id' in response:
-                    record_id = response['id']
-                    st.success(f"📋 Record ID (from response): {record_id}")
-                    return record_id
+                # Check if it has a 'fields' field with ID column
+                if 'fields' in response:
+                    fields = response['fields']
+                    # Look for ID column in fields
+                    if 'ID' in fields:
+                        record_id = fields['ID']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
+                    elif 'id' in fields:
+                        record_id = fields['id']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
+                    elif 'Id' in fields:
+                        record_id = fields['Id']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
                 # Check if it has a 'records' field
                 elif 'records' in response and len(response['records']) > 0:
                     record = response['records'][0]
-                    if isinstance(record, dict) and 'id' in record:
-                        record_id = record['id']
-                        st.success(f"📋 Record ID (from response): {record_id}")
-                        return record_id
-                # Check if it has a 'fields' field with id
-                elif 'fields' in response:
-                    st.write("Debug - Response has fields:", response['fields'])
-                    # Try to find id in fields or other common locations
-                    for key, value in response.items():
-                        if key == 'id':
-                            record_id = value
-                            st.success(f"📋 Record ID (from response): {record_id}")
+                    if isinstance(record, dict) and 'fields' in record:
+                        fields = record['fields']
+                        if 'ID' in fields:
+                            record_id = fields['ID']
+                            st.success(f"📋 ID Column Value (from response): {record_id}")
+                            return record_id
+                        elif 'id' in fields:
+                            record_id = fields['id']
+                            st.success(f"📋 ID Column Value (from response): {record_id}")
+                            return record_id
+                        elif 'Id' in fields:
+                            record_id = fields['Id']
+                            st.success(f"📋 ID Column Value (from response): {record_id}")
                             return record_id
             
             # If response is a list
             elif isinstance(response, list) and len(response) > 0:
-                st.write("Debug - Response is a list")
                 record = response[0]
-                if isinstance(record, dict) and 'id' in record:
-                    record_id = record['id']
-                    st.success(f"📋 Record ID (from response): {record_id}")
-                    return record_id
+                if isinstance(record, dict) and 'fields' in record:
+                    fields = record['fields']
+                    if 'ID' in fields:
+                        record_id = fields['ID']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
+                    elif 'id' in fields:
+                        record_id = fields['id']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
+                    elif 'Id' in fields:
+                        record_id = fields['Id']
+                        st.success(f"📋 ID Column Value (from response): {record_id}")
+                        return record_id
             
             # If we can't get ID from response, try to read it from the database
             if not record_id:
@@ -129,11 +155,10 @@ def save_event(event_data):
                     record_id = get_record_by_host_id(event_data['host_id'])
                     
                     if record_id:
-                        st.success(f"📋 Record ID (from database): {record_id}")
+                        st.success(f"📋 ID Column Value (from database): {record_id}")
                         return record_id
                     else:
-                        st.error("❌ Record ID alınamadı")
-                        st.write("Debug - Response structure:", response)
+                        st.error("❌ ID Column Value alınamadı")
                         return None
                 except Exception as e:
                     st.error(f"❌ Record ID alınırken hata: {e}")
