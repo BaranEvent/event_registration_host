@@ -32,6 +32,29 @@ def get_airtable_table(table_name):
     api = get_airtable_api()
     return api.table(AIRTABLE_CONFIG["base_id"], table_name)
 
+def get_record_by_host_id(host_id):
+    """Get record by host_id to retrieve the record ID"""
+    try:
+        table = get_airtable_table("events")
+        # Search for records with the specific host_id
+        # Try different formula syntax
+        try:
+            records = table.all(formula=f"{{host_id}} = '{host_id}'")
+        except:
+            # Fallback: get all records and filter
+            records = table.all()
+            records = [r for r in records if r.get('fields', {}).get('host_id') == host_id]
+        
+        if records and len(records) > 0:
+            # Get the most recent record (last created)
+            latest_record = records[-1]
+            return latest_record.get('id')
+        
+        return None
+    except Exception as e:
+        st.error(f"Record ID alınırken hata oluştu: {e}")
+        return None
+
 def generate_host_id():
     """Generate a random host ID"""
     return random.randint(1000, 9999)
@@ -52,14 +75,77 @@ def save_event(event_data):
             "capacity": event_data['capacity']
         }
         
-        table.create(record_data)
+        # Create the record
+        response = table.create(record_data)
         
-        st.success("Etkinlik başarıyla kaydedildi!")
-        return True
+        # Debug: Log the response
+        st.write("Debug - Response type:", type(response))
+        st.write("Debug - Response keys:", response.keys() if isinstance(response, dict) else "Not a dict")
+        
+        if response:
+            st.success("✅ Etkinlik başarıyla kaydedildi!")
+            
+            # Handle different response structures
+            record_id = None
+            
+            # If response is a dict, it might contain the record directly
+            if isinstance(response, dict):
+                st.write("Debug - Response is a dictionary")
+                # Check if it has an 'id' field directly
+                if 'id' in response:
+                    record_id = response['id']
+                    st.success(f"📋 Record ID (from response): {record_id}")
+                    return record_id
+                # Check if it has a 'records' field
+                elif 'records' in response and len(response['records']) > 0:
+                    record = response['records'][0]
+                    if isinstance(record, dict) and 'id' in record:
+                        record_id = record['id']
+                        st.success(f"📋 Record ID (from response): {record_id}")
+                        return record_id
+                # Check if it has a 'fields' field with id
+                elif 'fields' in response:
+                    st.write("Debug - Response has fields:", response['fields'])
+                    # Try to find id in fields or other common locations
+                    for key, value in response.items():
+                        if key == 'id':
+                            record_id = value
+                            st.success(f"📋 Record ID (from response): {record_id}")
+                            return record_id
+            
+            # If response is a list
+            elif isinstance(response, list) and len(response) > 0:
+                st.write("Debug - Response is a list")
+                record = response[0]
+                if isinstance(record, dict) and 'id' in record:
+                    record_id = record['id']
+                    st.success(f"📋 Record ID (from response): {record_id}")
+                    return record_id
+            
+            # If we can't get ID from response, try to read it from the database
+            if not record_id:
+                st.info("🔄 Record ID alınıyor...")
+                try:
+                    record_id = get_record_by_host_id(event_data['host_id'])
+                    
+                    if record_id:
+                        st.success(f"📋 Record ID (from database): {record_id}")
+                        return record_id
+                    else:
+                        st.error("❌ Record ID alınamadı")
+                        st.write("Debug - Response structure:", response)
+                        return None
+                except Exception as e:
+                    st.error(f"❌ Record ID alınırken hata: {e}")
+                    return None
+        
+        st.error("❌ Kayıt oluşturulamadı")
+        return None
         
     except Exception as e:
-        st.error(f"Etkinlik kaydedilirken hata oluştu: {str(e)}")
-        return False
+        st.error(f"❌ Etkinlik kaydedilirken hata oluştu: {e}")
+        st.error(f"❌ Hata detayı: {type(e).__name__}")
+        return None
 
 def validate_event_data(event_data):
     """Validate event data"""
@@ -238,10 +324,49 @@ def main():
                 for error in errors:
                     st.error(f"• {error}")
             else:
-                if save_event(event_data):
+                record_id = save_event(event_data)
+                if record_id:
                     # Clear form
                     st.session_state.event_data = {}
-                    st.rerun()
+                    
+                    # Store the redirect URL in session state
+                    redirect_url = f"https://eventfeatures.streamlit.app?event_id={record_id}"
+                    st.session_state.redirect_url = redirect_url
+                    st.session_state.should_redirect = True
+                    
+                    # Show success message and redirect link
+                    st.success("✅ Etkinlik başarıyla kaydedildi!")
+                    st.info(f"📋 Record ID: {record_id}")
+                    
+                    st.markdown("---")
+                    st.markdown("### 🔗 Yönlendirme")
+                    st.markdown(f"**Hedef URL:** {redirect_url}")
+                    
+                    # Create a clickable link
+                    st.markdown(f"""
+                    <a href="{redirect_url}" target="_blank">
+                        <button style="
+                            background-color: #4CAF50;
+                            border: none;
+                            color: white;
+                            padding: 15px 32px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            border-radius: 4px;
+                        ">
+                            🚀 Event Features Sayfasına Git
+                        </button>
+                    </a>
+                    """, unsafe_allow_html=True)
+                    
+                    st.info("💡 Yukarıdaki butona tıklayarak Event Features sayfasına gidebilirsiniz.")
+                    
+                    # Stop execution to prevent form reset
+                    st.stop()
 
 if __name__ == "__main__":
     main() 
