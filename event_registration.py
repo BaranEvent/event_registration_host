@@ -199,7 +199,7 @@ def validate_event_data(event_data):
             errors.append("Bitiş tarihi başlangıç tarihinden sonra olmalıdır")
     
     if not event_data.get('capacity') or event_data['capacity'] <= 0:
-        errors.append("Kapasite 0'dan büyük olmalıdır")
+        errors.append("Beklenen Katılım Miktarı 0'dan büyük olmalıdır")
     
     return errors
 
@@ -226,10 +226,10 @@ def main():
         
         with col2:
             capacity = st.number_input(
-                "Kapasite *",
+                "Beklenen Katılım Miktarı *",
                 min_value=1,
                 value=50,
-                help="Etkinliğinizin maksimum katılımcı sayısı"
+                help="Etkinliğinizin beklenen katılımcı sayısı"
             )
         
         # Description
@@ -317,7 +317,7 @@ def main():
             with col_preview1:
                 st.markdown(f"**Etkinlik Adı:** {event_name}")
                 st.markdown(f"**Mekan:** {location_name}")
-                st.markdown(f"**Kapasite:** {capacity} kişi")
+                st.markdown(f"**Beklenen Katılım Miktarı:** {capacity} kişi")
                 st.markdown(f"**Host ID:** {host_id}")
             
             with col_preview2:
