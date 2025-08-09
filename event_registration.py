@@ -77,6 +77,7 @@ def save_event(event_data):
         record_data = {
             "name": event_data['name'],
             "description": event_data['description'],
+            "type": event_data['type'],
             "host_id": event_data['host_id'],
             "location_name": event_data['location_name'],
             "detailed_address": event_data['detailed_address'],
@@ -182,6 +183,9 @@ def validate_event_data(event_data):
     if not event_data.get('description'):
         errors.append("Etkinlik açıklaması zorunludur")
     
+    if not event_data.get('type'):
+        errors.append("Etkinlik türü zorunludur")
+    
     if not event_data.get('location_name'):
         errors.append("Mekan adı zorunludur")
     
@@ -225,12 +229,35 @@ def main():
             )
         
         with col2:
-            capacity = st.number_input(
-                "Beklenen Katılım Miktarı *",
-                min_value=1,
-                value=50,
-                help="Etkinliğinizin beklenen katılımcı sayısı"
+            event_type = st.selectbox(
+                "Etkinlik Türü *",
+                options=[
+                    "",
+                    "Konferans, Zirve & Seminer",
+                    "Kongre, Fuar & Sergi",
+                    "Kurumsal & İş Etkinlikleri",
+                    "Atölye, Eğitim & Networking",
+                    "Teknoloji Etkinlikleri & Hackathon",
+                    "Festival, Panayır & Kutlama",
+                    "Konser, Müzik & Sahne Sanatları",
+                    "Spor, Espor & Yarışmalar",
+                    "Sağlık, Wellness & Hayır Etkinlikleri",
+                    "Yiyecek, İçecek & Gastronomi",
+                    "Gece Hayatı & Parti",
+                    "Seyahat, Tur & Gezi",
+                    "Aile, Çocuk & Topluluk Etkinlikleri",
+                    "Sanal & Hibrit Etkinlikler"
+                ],
+                help="Etkinliğinizin türünü seçin"
             )
+        
+        # Capacity field in a new row
+        capacity = st.number_input(
+            "Beklenen Katılım Miktarı *",
+            min_value=1,
+            value=50,
+            help="Etkinliğinizin beklenen katılımcı sayısı"
+        )
         
         # Description
         description = st.text_area(
@@ -309,13 +336,14 @@ def main():
         st.markdown("---")
         st.header("👁️ Önizleme")
         
-        if event_name and description and location_name and detailed_address:
+        if event_name and description and event_type and location_name and detailed_address:
             st.markdown("**Etkinlik Özeti:**")
             
             col_preview1, col_preview2 = st.columns(2)
             
             with col_preview1:
                 st.markdown(f"**Etkinlik Adı:** {event_name}")
+                st.markdown(f"**Etkinlik Türü:** {event_type}")
                 st.markdown(f"**Mekan:** {location_name}")
                 st.markdown(f"**Beklenen Katılım Miktarı:** {capacity} kişi")
                 st.markdown(f"**Host ID:** {host_id}")
@@ -333,6 +361,7 @@ def main():
             event_data = {
                 'name': event_name,
                 'description': description,
+                'type': event_type,
                 'host_id': host_id,
                 'location_name': location_name,
                 'detailed_address': detailed_address,
