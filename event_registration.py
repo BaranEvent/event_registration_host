@@ -83,7 +83,8 @@ def save_event(event_data):
             "detailed_address": event_data['detailed_address'],
             "start_date": event_data['start_date'].isoformat(),
             "end_date": event_data['end_date'].isoformat(),
-            "capacity": event_data['capacity']
+            "capacity": event_data['capacity'],
+            "is_visible": event_data['is_visible']
         }
         
         # Create the record
@@ -204,6 +205,9 @@ def validate_event_data(event_data):
     
     if not event_data.get('capacity') or event_data['capacity'] <= 0:
         errors.append("Beklenen Katılım Miktarı 0'dan büyük olmalıdır")
+    
+    if 'is_visible' not in event_data:
+        errors.append("Uygulama içerisinde etkinliğinizin gözükmesini ister misiniz seçeneği zorunludur")
     
     return errors
 
@@ -332,6 +336,25 @@ def main():
         
         st.info(f"**Host ID:** {host_id} (Otomatik oluşturuldu)")
         
+        # Visibility checkbox with enhanced styling
+        st.markdown("---")
+        st.markdown("### 🌟 **Etkinlik Görünürlüğü**")
+        
+        col_visibility1, col_visibility2 = st.columns([1, 3])
+        
+        with col_visibility1:
+            is_visible = st.checkbox(
+                "**Uygulamada Görünür** *",
+                value=True,
+                help="Bu seçenek işaretlenirse etkinliğiniz uygulama içerisinde görünür olacaktır"
+            )
+        
+        with col_visibility2:
+            if is_visible:
+                st.success("✅ Etkinliğiniz uygulamada görünür olacak")
+            else:
+                st.warning("⚠️ Etkinliğiniz uygulamada gizli olacak")
+        
         # Preview section
         st.markdown("---")
         st.header("👁️ Önizleme")
@@ -347,6 +370,7 @@ def main():
                 st.markdown(f"**Mekan:** {location_name}")
                 st.markdown(f"**Beklenen Katılım Miktarı:** {capacity} kişi")
                 st.markdown(f"**Host ID:** {host_id}")
+                st.markdown(f"**Uygulamada Görünür:** {'Evet' if is_visible else 'Hayır'}")
             
             with col_preview2:
                 st.markdown(f"**Başlangıç:** {start_datetime.strftime('%d/%m/%Y %H:%M')}")
@@ -367,7 +391,8 @@ def main():
                 'detailed_address': detailed_address,
                 'start_date': start_datetime,
                 'end_date': end_datetime,
-                'capacity': capacity
+                'capacity': capacity,
+                'is_visible': is_visible
             }
             
             # Validate data
